@@ -222,7 +222,7 @@ class PDFPreviewer:
 # 🎨 GIAO DIỆN CHÍNH
 # ==========================================================
 root = tk.Tk()
-root.title("※ PDF 名前変更ツール + プレビュー機能")
+root.title("※ PDF 名前変更ツール")
 root.geometry("700x780")
 root.resizable(False, False)
 root.configure(bg="#cce6ff")
@@ -291,3 +291,4 @@ output_label = tk.Label(root, text="", bg="#cce6ff", font=("Arial", 11, "bold"))
 output_label.pack(pady=(0, 10))
 
 root.mainloop()
+
