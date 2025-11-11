@@ -21,34 +21,30 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.8.7
-          architecture: x86   # 🟢 Build 32-bit
+          architecture: x86
 
       # 3️⃣ Cập nhật pip
       - name: Upgrade pip
-        shell: pwsh
         run: python -m pip install --upgrade pip
 
       # 4️⃣ Cài thư viện cần thiết
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install pyinstaller pillow PyMuPDF
+          python -m pip install --upgrade pyinstaller pillow PyMuPDF
           if (Test-Path "requirements.txt") {
-              python -m pip install -r requirements.txt
+            python -m pip install -r requirements.txt
           } else {
-              Write-Host "No requirements.txt found, skipping..."
+            Write-Host "No requirements.txt found, skipping..."
           }
 
-      # 5️⃣ Lấy đường dẫn site-packages (để add dữ liệu Pillow)
-      - name: Get site-packages path
-        id: sitepkg
+      # 5️⃣ Kiểm tra đường dẫn Pillow
+      - name: Check Pillow path
         shell: pwsh
         run: |
-          $site = [System.IO.Path]::Combine((python -c "import site; print(site.getsitepackages()[0])"), "")
-          Write-Host "SITEPACKAGES=$site"
-          echo "SITEPACKAGES=$site" >> $env:GITHUB_ENV
+          python -c "import PIL; print('Pillow path:', PIL.__file__)"
 
-      # 6️⃣ Đóng gói thành file EXE
+      # 6️⃣ Build EXE với PyInstaller
       - name: Build executable (PyInstaller)
         shell: pwsh
         run: |
@@ -58,10 +54,9 @@ jobs:
             --hidden-import=PIL.ImageTk `
             --hidden-import=fitz `
             --hidden-import=PyMuPDF `
-            --add-data "$env:SITEPACKAGES\PIL;PIL" `
             rename_pdfs_gui9.py
 
-      # 7️⃣ Upload file exe lên GitHub Actions (tab Artifacts)
+      # 7️⃣ Upload file EXE lên GitHub Actions (tab Artifacts)
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
