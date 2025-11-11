@@ -1,69 +1,64 @@
-name: Build EXE (32-bit)
+name: Build Python 3.8.7 32-bit App
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # 1️⃣ Lấy code về
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Python 3.8 (32-bit)
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.8.7
-        architecture: x86
+      # 2️⃣ Cài Python 3.8.7 32-bit
+      - name: Set up Python 3.8.7 (x86)
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.8.7
+          architecture: x86   # 🟢 Build 32-bit
 
-    - name: Upgrade pip
-      run: python -m pip install --upgrade pip
+      # 3️⃣ Cập nhật pip
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
 
-    - name: Install dependencies
-      run: |
-        pip install pyinstaller pillow PyMuPDF
+      # 4️⃣ Cài thư viện cần thiết
+      - name: Install dependencies
+        run: |
+          python -m pip install pyinstaller pillow PyMuPDF
+          if (Test-Path "requirements.txt") {
+            python -m pip install -r requirements.txt
+          } else {
+            Write-Host "No requirements.txt found, skipping..."
+          }
 
-    - name: Get site-packages path
-      id: sitepkg
-      run: |
-        python -c "import site, os; print(os.path.dirname(site.__file__))" > sitepkg_path.txt
-        type sitepkg_path.txt
-    - name: Read site-packages path
-      run: |
-        set /p SITEPACKAGES=<sitepkg_path.txt
-        echo SITEPACKAGES=%SITEPACKAGES%
-        setx SITEPACKAGES "%SITEPACKAGES%"
+      # 5️⃣ Lấy đường dẫn site-packages (để add dữ liệu Pillow)
+      - name: Get site-packages path
+        id: sitepkg
+        shell: bash
+        run: |
+          echo "SITEPACKAGES=$(python -c 'import site; print(site.getsitepackages()[0])')" >> $GITHUB_ENV
 
-    - name: Build executable with PyInstaller
-      shell: cmd
-      run: |
-        set SITEPKG_PATH=%SITEPACKAGES%\site-packages\PIL
-        if exist "%SITEPKG_PATH%" (
-            echo Found PIL at %SITEPKG_PATH%
-            pyinstaller --onefile --noconsole ^
-              --hidden-import=PIL ^
-              --hidden-import=PIL.Image ^
-              --hidden-import=PIL.ImageTk ^
-              --hidden-import=fitz ^
-              --hidden-import=PyMuPDF ^
-              --add-data "%SITEPKG_PATH%;PIL" ^
-              rename_pdfs_gui9.py
-        ) else (
-            echo [WARNING] PIL folder not found, skipping add-data.
-            pyinstaller --onefile --noconsole ^
-              --hidden-import=PIL ^
-              --hidden-import=PIL.Image ^
-              --hidden-import=PIL.ImageTk ^
-              --hidden-import=fitz ^
-              --hidden-import=PyMuPDF ^
-              rename_pdfs_gui9.py
-        )
+      # 6️⃣ Đóng gói thành file EXE
+      - name: Build executable (PyInstaller)
+        shell: cmd
+        run: |
+          pyinstaller --onefile --noconsole ^
+            --hidden-import=PIL ^
+            --hidden-import=PIL.Image ^
+            --hidden-import=PIL.ImageTk ^
+            --hidden-import=fitz ^
+            --hidden-import=PyMuPDF ^
+            --add-data "%SITEPACKAGES%\PIL;PIL" ^
+            rename_pdfs_gui9.py
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: rename_pdfs_gui9-exe
-        path: dist/rename_pdfs_gui9.exe
+      # 7️⃣ Upload file exe lên GitHub Actions (tab Artifacts)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF_Renamer_32bit
+          path: dist/rename_pdfs_gui9.exe
